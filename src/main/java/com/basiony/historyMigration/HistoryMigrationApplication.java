@@ -23,7 +23,7 @@ public class HistoryMigrationApplication implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 //        metaSectionReadingService.loopOverSheets();
-        bodySectionReadingService.workingWithDates();
+        bodySectionReadingService.readBodySection();
     }
 
 

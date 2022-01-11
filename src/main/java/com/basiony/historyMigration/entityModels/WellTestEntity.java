@@ -3,6 +3,7 @@ package com.basiony.historyMigration.entityModels;
 import lombok.*;
 
 import javax.persistence.*;
+import java.sql.Date;
 
 @Entity
 @Data
@@ -13,7 +14,7 @@ public class WellTestEntity {
     private Long id;
     private String wellName;
     private String actionKey;
-    private String measurementDate;
+    private Date measurementDate;
     private double gross;
     private double net;
     private double wc;
