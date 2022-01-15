@@ -8,6 +8,7 @@ import com.basiony.historyMigration.entityModels.WellTestEntity;
 import com.basiony.historyMigration.repo.FluidLevelRepository;
 import com.basiony.historyMigration.repo.WaterCutRepository;
 
+import com.basiony.historyMigration.repo.WellRemarksRepository;
 import com.basiony.historyMigration.repo.WellTestRepository;
 import com.basiony.historyMigration.service.BodySectionReadingService;
 import com.basiony.historyMigration.utils.SpreadSheetUtility;
@@ -20,11 +21,14 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.persistence.Entity;
 import java.io.*;
 import java.sql.Date;
 import java.sql.SQLData;
 import java.util.*;
 import java.text.SimpleDateFormat;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 @Service
@@ -32,7 +36,7 @@ public class BodySectionReadingServiceImpl implements BodySectionReadingService 
 
 
     // here uploadFolder contains the well history data
-    final String filePath = "src/main/resources/static/ne.xlsx";
+    final String filePath = "src/main/resources/static/3-ne.xlsx";
     final int dateColumnIndex = 0;
 
     XSSFWorkbook workbook;
@@ -41,17 +45,21 @@ public class BodySectionReadingServiceImpl implements BodySectionReadingService 
     ArrayList<WaterCutEntity> waterCutEntities = new ArrayList<>();
     ArrayList<WellTestEntity> wellTestEntities = new ArrayList<>();
     ArrayList<FluidLevelEntity> fluidLevelEntities = new ArrayList<>();
+    ArrayList<WellRemarksEntity> wellRemarksEntities = new ArrayList<>();
     WellTestRepository wellTestRepository;
     WaterCutRepository waterCutRepository;
     FluidLevelRepository fluidLevelRepository;
+    WellRemarksRepository wellRemarksRepository;
     SpreadSheetUtility sheetUtility;
 
     @Autowired
-    public BodySectionReadingServiceImpl(WellTestRepository wellTestRepository, WaterCutRepository waterCutRepository, FluidLevelRepository fluidLevelRepository) {
+    public BodySectionReadingServiceImpl(WellTestRepository wellTestRepository, WaterCutRepository waterCutRepository, FluidLevelRepository fluidLevelRepository
+            , WellRemarksRepository wellRemarksRepository) {
         this.wellTestRepository = wellTestRepository;
         this.waterCutRepository = waterCutRepository;
         this.fluidLevelRepository = fluidLevelRepository;
         sheetUtility = new SpreadSheetUtility();
+        this.wellRemarksRepository = wellRemarksRepository;
     }
 
     @Override
@@ -70,23 +78,28 @@ public class BodySectionReadingServiceImpl implements BodySectionReadingService 
                 System.out.println(" ------------------Reading data for Well : " + currentWorkSheet.getSheetName() + " -----------------------------");
                 System.out.println("The actual row count is  : " + rowNumbers);
 
-                for (int i = 6; i < rowNumbers - 1; i++) {
+                for (int i = 6; i <= rowNumbers; i++) {
                     XSSFRow currentRow = sheet.getRow(i);
                     XSSFCell dateCell = currentRow.getCell(dateColumnIndex);
                     dateCell.setCellType(CellType.NUMERIC);
                     sheetUtility.manageMergedCells(sheet, dateCell);
                     XSSFCell keyCell = currentRow.getCell(keyColumnIndex);
+
+                    sheetUtility.manageEmptyKeys(keyCell);
+
                     getHistoryObjects(currentWorkSheet, currentRow, keyCell);
                 }
             }
 
-            waterCutEntities.forEach(System.out::println);
-            wellTestEntities.forEach(System.out::println);
-            fluidLevelEntities.forEach(System.out::println);
+//            waterCutEntities.forEach(System.out::println);
+//            wellTestEntities.forEach(System.out::println);
+//            fluidLevelEntities.forEach(System.out::println);
 
             wellTestRepository.saveAll(wellTestEntities);
             fluidLevelRepository.saveAll(fluidLevelEntities);
             waterCutRepository.saveAll(waterCutEntities);
+            wellRemarksRepository.saveAll(wellRemarksEntities);
+
 
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -99,7 +112,23 @@ public class BodySectionReadingServiceImpl implements BodySectionReadingService 
      */
     private void getHistoryObjects(Sheet sheet, XSSFRow row, XSSFCell keyCell) {
 
+
+
         String key = keyCell.getStringCellValue().toUpperCase();
+        System.out.println("the action key value is : " + key);
+        Pattern pattern = Pattern.compile("\\bTEST", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(key);
+
+        //handling the key values, by checking whether they contain a certain string or not.
+        // this to avoid using regex.
+        if (key.contains("TEST")) {
+            key = "TEST";
+        } else if (key.contains("W.C")) {
+            key = "W.C";
+        } else if (key.contains("F.L")) {
+            key = "F.L";
+        }
+
         switch (key) {
             case "TEST": {
                 WellTestEntity entity = new WellTestEntity();
@@ -108,10 +137,9 @@ public class BodySectionReadingServiceImpl implements BodySectionReadingService 
                 double date = row.getCell(dateColumnIndex).getNumericCellValue();
                 entity.setMeasurementDate(new java.sql.Date((long) (date - 25569) * 86400 * 1000));
                 entity.setActionKey("Well Test");
-                System.out.println(row.getRowNum());
-                Cell g  = row.getCell(2);
+                Cell g = row.getCell(2);
                 g.setCellType(CellType.NUMERIC);
-                Cell w  = row.getCell(4);
+                Cell w = row.getCell(4);
                 w.setCellType(CellType.NUMERIC);
 
                 entity.setGross(row.getCell(2).getNumericCellValue());
@@ -130,6 +158,7 @@ public class BodySectionReadingServiceImpl implements BodySectionReadingService 
                     }
                     case Cell.CELL_TYPE_STRING: {
                         entity.setGor(row.getCell(5).getStringCellValue());
+                        break;
                     }
                 }
 
@@ -148,18 +177,18 @@ public class BodySectionReadingServiceImpl implements BodySectionReadingService 
                 Cell remarkCell = row.getCell(11, Row.CREATE_NULL_AS_BLANK);
                 switch (remarkCell.getCellType()) {
                     case Cell.CELL_TYPE_BLANK: {
-                        entity.setRemarks(String.valueOf(""));
+                        entity.setRemarks("");
                         break;
                     }
                     case Cell.CELL_TYPE_STRING: {
                         entity.setRemarks(row.getCell(11).getStringCellValue());
+                        break;
                     }
 
                 }
                 wellTestEntities.add(entity);
             }
             break;
-
             case "W.C": {
                 WaterCutEntity entity = new WaterCutEntity();
                 entity.setWellName(sheet.getSheetName());
@@ -181,6 +210,7 @@ public class BodySectionReadingServiceImpl implements BodySectionReadingService 
                     case Cell.CELL_TYPE_STRING: {
                         entity.setWaterCut(row.getCell(2).getStringCellValue());
                     }
+                    break;
                 }
 
                 Cell remarkCell = row.getCell(11, Row.CREATE_NULL_AS_BLANK);
@@ -191,6 +221,7 @@ public class BodySectionReadingServiceImpl implements BodySectionReadingService 
                     }
                     case Cell.CELL_TYPE_STRING: {
                         entity.setComments(row.getCell(11).getStringCellValue());
+                        break;
                     }
                 }
                 waterCutEntities.add(entity);
@@ -256,6 +287,7 @@ public class BodySectionReadingServiceImpl implements BodySectionReadingService 
                     }
                     case Cell.CELL_TYPE_STRING: {
                         entity.setRemarks(row.getCell(11).getStringCellValue());
+                        break;
                     }
                 }
 
@@ -263,24 +295,39 @@ public class BodySectionReadingServiceImpl implements BodySectionReadingService 
             }
             break;
             default: {
-//              String wcKeyValue = (row.getCell(4, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL).getStringCellValue());
-//                if (wcKeyValue.length() >2) {
-//                    //this means they stored it as a remark
-//                    WellRemarksEntity e = new WellRemarksEntity();
-//                    e.setActionDate(String.valueOf(row.getCell(0).getDateCellValue()));
-//                    e.setActionKey("lab remark");
-//                    e.setOperationalComment(row.getCell());
-//                } else {
-//
-//                }
-//                WaterCutEntity entity = new WaterCutEntity();
-//                entity.setWellName(sheet.getSheetName());
-//                entity.setMeasurementDate(String.valueOf(row.getCell(0).getDateCellValue()));
-//                entity.setComments(row.getCell(11).getStringCellValue());
-//
+                // reading the daily operational comments and their values.
+                WellRemarksEntity entity = new WellRemarksEntity();
+                entity.setWellName(sheet.getSheetName());
+                entity.setActionKey(keyCell.getStringCellValue());
+                double date = row.getCell(dateColumnIndex).getNumericCellValue();
+                entity.setActionDate(new java.sql.Date((long) (date - 25569) * 86400 * 1000));
+
+                Cell oCommentCell = row.getCell(2, Row.CREATE_NULL_AS_BLANK);
+                switch (oCommentCell.getCellType()) {
+                    case Cell.CELL_TYPE_BLANK: {
+                        entity.setOperationalComment("");
+                        break;
+                    }
+                    case Cell.CELL_TYPE_STRING: {
+                        entity.setOperationalComment(row.getCell(2).getStringCellValue());
+                        break;
+                    }
+                }
+
+
+                Cell remarkCell = row.getCell(11, Row.CREATE_NULL_AS_BLANK);
+                switch (remarkCell.getCellType()) {
+                    case Cell.CELL_TYPE_BLANK: {
+                        entity.setRemarks("");
+                        break;
+                    }
+                    case Cell.CELL_TYPE_STRING: {
+                        entity.setRemarks(row.getCell(11).getStringCellValue());
+                    }
+                }
+                wellRemarksEntities.add(entity);
             }
             break;
-
         }
     }
 
@@ -291,6 +338,5 @@ public class BodySectionReadingServiceImpl implements BodySectionReadingService 
                 (long) ((date - 25569) * 86400 * 1000))));
         return (SQLData) new Date((long) (date - 25569) * 86400 * 1000);
     }
-
 
 }

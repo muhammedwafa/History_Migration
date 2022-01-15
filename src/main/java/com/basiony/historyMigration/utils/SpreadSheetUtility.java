@@ -6,9 +6,12 @@ import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 
+import java.io.File;
+import java.io.FileFilter;
+
 
 /***
- * This utility class should contatin methods to help maneging the Excel spreadsheet
+ * This utility class should contain methods to help maneging the Excel spreadsheet
  */
 public class SpreadSheetUtility {
     private XSSFSheet sheet;
@@ -21,6 +24,9 @@ public class SpreadSheetUtility {
     public SpreadSheetUtility() {
 
     }
+
+
+
 
     //get the actual used row numbers
     public int actualRowNumbers(XSSFSheet sheet) {
@@ -98,9 +104,17 @@ public class SpreadSheetUtility {
             previousCell.setCellType(CellType.NUMERIC);
             cell.setCellType(CellType.NUMERIC);
             cell.setCellValue(previousCell.getNumericCellValue());
-            System.out.println("sheet Name: " + cell.getSheet().getSheetName() +" Row index: " +  cell.getRowIndex() + 1 );
+//            System.out.println("sheet Name: " + cell.getSheet().getSheetName() +" Row index: " +  cell.getRowIndex() + 1 );
         }
 
+    }
+
+    public void manageEmptyKeys( Cell cell) {
+        if (cell.getCellType() == Cell.CELL_TYPE_BLANK ) {
+            cell.setCellType(CellType.STRING);
+            cell.setCellValue("OTHER");
+            System.out.println("Found empty key cell in sheet Name: " + cell.getSheet().getSheetName() +" @ Row index: " +  cell.getRowIndex() + 1 );
+        }
     }
 
     public void formatRange(XSSFSheet sheet,int start, int end) {
@@ -117,5 +131,20 @@ public class SpreadSheetUtility {
     }
     public void formatCellAsNumber(Cell cell){
         cell.setCellType(CellType.NUMERIC);
+    }
+
+
+
+    // creating a file filter.
+    public static class ExcelFileFilter implements java.io.FileFilter {
+        @Override
+        public boolean accept(File file) {
+            return file != null &&
+                    file.isFile() &&
+                    file.canRead() &&
+                    (file.getName().endsWith("xls")
+                            || file.getName().endsWith("xlsx"));
+        }
+
     }
 }

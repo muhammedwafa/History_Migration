@@ -10,20 +10,20 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 @RequiredArgsConstructor
 public class HistoryMigrationApplication implements CommandLineRunner {
-    private final MetaSectionReadingService metaSectionReadingService = null;
+    private final MetaSectionReadingService metaSectionReadingService;
     private final BodySectionReadingServiceImpl bodySectionReadingService;
-//
-//    public HistoryMigrationApplication(BodySectionReadingServiceImpl service){
-//        this.bodySectionReadingService = service;
-//    }
+
     public static void main(String[] args) {
         SpringApplication.run(HistoryMigrationApplication.class, args);
     }
 
     @Override
     public void run(String... args) throws Exception {
-//        metaSectionReadingService.loopOverSheets();
+        System.out.println("the Directory Has the following Excel sheets:");
+        metaSectionReadingService.getWorkBooksInDirectory();
+        metaSectionReadingService.loopOverSheets();
         bodySectionReadingService.readBodySection();
+        System.out.println("successfully managed to read data for : " + metaSectionReadingService.totalNumberOfSheets + "sheets");
     }
 
 

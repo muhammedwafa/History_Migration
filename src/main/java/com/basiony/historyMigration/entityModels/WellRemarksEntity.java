@@ -15,6 +15,7 @@ public class WellRemarksEntity {
     private String wellName;
     private String actionKey;
     private Date actionDate;
+    @Column(length = 10000)
     private String operationalComment;
     @Column(length = 5000)
     private String remarks;

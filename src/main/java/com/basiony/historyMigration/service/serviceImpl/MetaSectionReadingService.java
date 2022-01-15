@@ -3,6 +3,7 @@ package com.basiony.historyMigration.service.serviceImpl;
 import com.basiony.historyMigration.buisnessModels.WellMettaData;
 import com.basiony.historyMigration.entityModels.WellMettaDataEntity;
 import com.basiony.historyMigration.repo.WellMetaDataRepository;
+import com.basiony.historyMigration.utils.SpreadSheetUtility;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -15,18 +16,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class MetaSectionReadingService {
-    final String filePath = "src/main/resources/static/aman wells.xlsx";
+    final String filePath = "src/main/resources/static/3-ne.xlsx";
     private XSSFWorkbook workbook;
     private WellMettaData well1MetaData;
     private final List<WellMettaData> wellsMetaData = new ArrayList<>();
     private final List<WellMettaDataEntity> entities = new ArrayList<>();
-
+    public int  totalNumberOfSheets = 0;
     WellMetaDataRepository wellMetaDataRepository;
 
     //default constructor
@@ -34,20 +36,38 @@ public class MetaSectionReadingService {
     public MetaSectionReadingService(WellMetaDataRepository wellMetaDataRepository) {
         this.wellMetaDataRepository = wellMetaDataRepository;
         try {
+
+
             workbook = new XSSFWorkbook(new File(filePath));
         } catch (IOException | InvalidFormatException e) {
             e.printStackTrace();
         }
     }
 
+    public void getWorkBooksInDirectory() throws IOException, InvalidFormatException {
 
-    public void loopOverSheets(){
+        // using the filter to read Excel files.
+        FileFilter filter = new SpreadSheetUtility.ExcelFileFilter();
+        File directory = new File("src/main/resources/static");
+        File[] files = directory.listFiles(filter);
+        for (File file : files) {
+            System.out.println("File Name: " + file.getName());
+            System.out.println("counting the number of sheets ......");
+            XSSFWorkbook currentWorkBook = new XSSFWorkbook(file);
+            System.out.println("contains " + currentWorkBook.getNumberOfSheets() + " sheets");
+            totalNumberOfSheets = totalNumberOfSheets + currentWorkBook.getNumberOfSheets();
+        }
+    }
+
+    public void loopOverSheets() {
         for (Sheet sheet : workbook) {
+            System.out.println("reading meta data for the well : " + sheet.getSheetName());
             formatRange(sheet);
             readMetaData(sheet);
+            mapData();
+            printItems();
         }
-        mapData();
-        printItems();
+
     }
 
     // this method will format each cell as a string to help to read them.
@@ -64,8 +84,8 @@ public class MetaSectionReadingService {
     // reading the file content.
     public void readMetaData(Sheet worksheet) {
 
+        System.out.println("Reading meta data for well : " + worksheet.getSheetName());
         // creating new object for each sheet.
-        System.out.println("started looping");
         well1MetaData = new WellMettaData();
         well1MetaData.setWellName(worksheet.getSheetName());
         int rowNumber;
@@ -128,7 +148,7 @@ public class MetaSectionReadingService {
     }
 
     // method to get all available business model classes
-    public List<WellMettaData> getAll(){
+    public List<WellMettaData> getAll() {
         return this.wellsMetaData;
     }
 
