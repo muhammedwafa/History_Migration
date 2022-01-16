@@ -3,16 +3,15 @@ package com.basiony.historyMigration.service.serviceImpl;
 import com.basiony.historyMigration.buisnessModels.WellMettaData;
 import com.basiony.historyMigration.entityModels.WellMettaDataEntity;
 import com.basiony.historyMigration.repo.WellMetaDataRepository;
+import com.basiony.historyMigration.service.MetaSectionReadingService1;
 import com.basiony.historyMigration.utils.SpreadSheetUtility;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -22,8 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class MetaSectionReadingService {
-    final String filePath = "src/main/resources/static/3-ne.xlsx";
+public class MetaSectionReadingService implements MetaSectionReadingService1 {
+    final String filePath = "src/main/resources/static/2-AMAN.xlsx";
     private XSSFWorkbook workbook;
     private WellMettaData well1MetaData;
     private final List<WellMettaData> wellsMetaData = new ArrayList<>();
@@ -36,41 +35,28 @@ public class MetaSectionReadingService {
     public MetaSectionReadingService(WellMetaDataRepository wellMetaDataRepository) {
         this.wellMetaDataRepository = wellMetaDataRepository;
         try {
-
-
             workbook = new XSSFWorkbook(new File(filePath));
         } catch (IOException | InvalidFormatException e) {
             e.printStackTrace();
         }
     }
 
-    public void getWorkBooksInDirectory() throws IOException, InvalidFormatException {
 
-        // using the filter to read Excel files.
-        FileFilter filter = new SpreadSheetUtility.ExcelFileFilter();
-        File directory = new File("src/main/resources/static");
-        File[] files = directory.listFiles(filter);
-        for (File file : files) {
-            System.out.println("File Name: " + file.getName());
-            System.out.println("counting the number of sheets ......");
-            XSSFWorkbook currentWorkBook = new XSSFWorkbook(file);
-            System.out.println("contains " + currentWorkBook.getNumberOfSheets() + " sheets");
-            totalNumberOfSheets = totalNumberOfSheets + currentWorkBook.getNumberOfSheets();
-        }
-    }
 
+    @Override
     public void loopOverSheets() {
         for (Sheet sheet : workbook) {
             System.out.println("reading meta data for the well : " + sheet.getSheetName());
             formatRange(sheet);
-            readMetaData(sheet);
-            mapData();
+            readHeaderSection(sheet);
+            mapEntitiesToModals();
             printItems();
         }
 
     }
 
     // this method will format each cell as a string to help to read them.
+    @Override
     public void formatRange(Sheet sheet) {
         for (int i = 0; i < 6; i++) {
             for (Row row : sheet) {
@@ -82,7 +68,8 @@ public class MetaSectionReadingService {
     }
 
     // reading the file content.
-    public void readMetaData(Sheet worksheet) {
+    @Override
+    public void readHeaderSection(Sheet worksheet) {
 
         System.out.println("Reading meta data for well : " + worksheet.getSheetName());
         // creating new object for each sheet.
@@ -128,7 +115,8 @@ public class MetaSectionReadingService {
     }
 
     //create a method that takes the business model,map it into entities and save to the database.
-    public void mapData() {
+    @Override
+    public void mapEntitiesToModals() {
         if (wellsMetaData.size() > 0) {
             wellsMetaData.forEach(x -> {
                 WellMettaDataEntity entity = new WellMettaDataEntity();
@@ -148,6 +136,7 @@ public class MetaSectionReadingService {
     }
 
     // method to get all available business model classes
+    @Override
     public List<WellMettaData> getAll() {
         return this.wellsMetaData;
     }

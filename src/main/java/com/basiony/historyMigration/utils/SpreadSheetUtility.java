@@ -26,8 +26,6 @@ public class SpreadSheetUtility {
     }
 
 
-
-
     //get the actual used row numbers
     public int actualRowNumbers(XSSFSheet sheet) {
 
@@ -125,7 +123,6 @@ public class SpreadSheetUtility {
             }
         }
     }
-
     public void formatCellAsString(Cell cell){
         cell.setCellType(CellType.STRING);
     }
@@ -134,17 +131,4 @@ public class SpreadSheetUtility {
     }
 
 
-
-    // creating a file filter.
-    public static class ExcelFileFilter implements java.io.FileFilter {
-        @Override
-        public boolean accept(File file) {
-            return file != null &&
-                    file.isFile() &&
-                    file.canRead() &&
-                    (file.getName().endsWith("xls")
-                            || file.getName().endsWith("xlsx"));
-        }
-
-    }
 }
